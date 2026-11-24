@@ -100,7 +100,7 @@ ol li::before{content:counter(n);position:absolute;left:0;top:10px;width:27px;he
 <div class="ov" id="helpOv" role="dialog" aria-modal="true"><div class="card">
   <button class="x" data-x aria-label="닫기"><svg viewBox="0 0 20 20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M3 3l14 14M17 3L3 17"/></svg></button>
   <h2>이용 안내</h2>
-  <ol><li>전시장 작품 옆 QR을 찍으면 책 한 권에 색이 칠해져요.</li><li>한 칸의 책 두 권을 모으면 그 칸 전체가 색을 찾아요.</li><li>열두 권을 모두 모으면 책장이 완성되고, 이미지로 저장할 수 있어요.</li><li>모은 책은 지금 쓰는 휴대폰 브라우저에 저장돼요. 끝까지 같은 브라우저를 써 주세요.</li></ol>
+  <ol><li>회색 제목은 아직 찾지 못한 작품이에요. 작품 옆 QR을 찍으면 책에 색이 칠해져요.</li><li>한 칸의 책 두 권을 모으면 그 칸 전체가 색을 찾아요.</li><li>열두 권을 모두 모으면 책장이 완성되고, 이미지로 저장할 수 있어요.</li><li>모은 책은 지금 쓰는 휴대폰 브라우저에 저장돼요. 끝까지 같은 브라우저를 써 주세요.</li></ol>
   <div class="col"><button class="btn" data-x>확인</button></div>
 </div></div>
 
@@ -157,9 +157,9 @@ function scribble(g,im,r,pad,t){
   g.drawImage(buf,x,y,w,h);
 }
 function fitFont(g,txt,max,size,fam){ do{ g.font='700 '+size+'px '+fam; if(g.measureText(txt).width<=max) break; size-=1 }while(size>12); return size }
-function spine(g,b,al){
+function spine(g,b,al,gray){
   const l=L.books[b.id],[x,y,w,h]=l.r,F="'MaruBuri',serif"; if(al<=0) return;
-  g.save(); g.globalAlpha=al; g.fillStyle='#fffaf0'; g.textAlign='center'; g.textBaseline='middle';
+  g.save(); g.globalAlpha=al; g.fillStyle=gray?'#827c74':'#fffaf0'; g.textAlign='center'; g.textBaseline='middle';
   if(l.o==='v'){
     const cols=b.lines||[b.title], top=y+93, bot=y+h-59, H=bot-top, most=Math.max(...cols.map(c=>[...c].reduce((a,ch)=>a+(ch===' '?.4:1),0)));
     const sz=Math.min(cols.length>1?36:40,H/(most*1.06)), gap=sz*(sz>30?1.2:1.32);
@@ -167,12 +167,12 @@ function spine(g,b,al){
     cols.forEach((c,k)=>{ const ch=[...c], tot=ch.reduce((a,q)=>a+(q===' '?.4:1),0)*sz*1.06, cx=x+w/2+(cols.length>1?(k===0?1:-1)*gap/2:0);
       let cy=cols.length>1? top+ (H-most*sz*1.06)/2 : top+(H-tot)/2;
       ch.forEach(q=>{ const st=(q===' '?.4:1)*sz*1.06; if(q!==' ') g.fillText(q,cx,cy+st/2); cy+=st }) });
-    fitFont(g,b.author,w-26,28,F); g.fillText(b.author,x+w/2,y+h-32);
+    if(!gray){ fitFont(g,b.author,w-26,28,F); g.fillText(b.author,x+w/2,y+h-32) }
   }else{
     const cols=b.lines||[b.title], cx0=x+100, cw=w-100-108, lh=w>370?36:37;
     const sz=Math.min(...cols.map(c=>fitFont(g,c,cw,cols.length>1?34:36,F))); g.font='700 '+sz+'px '+F;
     cols.forEach((c,k)=>g.fillText(c,cx0+cw/2,y+h/2+(k-(cols.length-1)/2)*lh+1));
-    fitFont(g,b.author,78,27,F); g.fillText(b.author,x+w-62,y+h/2+1);
+    if(!gray){ fitFont(g,b.author,78,27,F); g.fillText(b.author,x+w-62,y+h/2+1) }
   }
   g.restore();
 }
@@ -185,7 +185,7 @@ function drawScene(g,own,anim){
   const a=val('all',fin);
   if(a>=1) g.drawImage(IM.bc,0,0,L.W,L.H); else if(a>0) scribble(g,IM.bc,[0,0,L.W,L.H],0,a);
   for(let c=0;c<6;c++){ const t=val('c'+c,fl(c)); if(t<1) crop(g,IM.fl,L.chars[c],4); scribble(g,IM.fc,L.chars[c],4,t) }
-  B.forEach(b=>{ const r=L.books[b.id].r,t=val(b.id,isIn(b.id)); if(t<1) crop(g,IM.fl,r,3); scribble(g,IM.fc,r,3,t); spine(g,b,Math.max(0,(t-.75)/.25)) });
+  B.forEach(b=>{ const r=L.books[b.id].r,t=val(b.id,isIn(b.id)); if(t<1){ crop(g,IM.fl,r,3); spine(g,b,1,true) } scribble(g,IM.fc,r,3,t); spine(g,b,Math.max(0,(t-.75)/.25)) });
 }
 const cv=$('#scene'), cx=cv.getContext('2d'); let anim={}, raf=0;
 function paint(){ const w=cv.clientWidth, d=Math.min(devicePixelRatio||1,3), W=Math.round(w*d), H=Math.round(W*L.H/L.W);
@@ -200,12 +200,12 @@ let rz; addEventListener('resize',()=>{ clearTimeout(rz); rz=setTimeout(paint,80
 /* ---------- 화면 ---------- */
 B.forEach(b=>{ const r=L.books[b.id].r, d=document.createElement('button'); d.className='hit';
   d.style.cssText=`left:${r[0]/L.W*100}%;top:${r[1]/L.H*100}%;width:${r[2]/L.W*100}%;height:${r[3]/L.H*100}%`;
-  d.onclick=()=>has(b.id)?openBook(b.id,'see'):toast('아직 모으지 않은 책이에요'); b.el=d; $('#sceneWrap').appendChild(d) });
+  d.onclick=()=>has(b.id)?openBook(b.id,'see'):toast('‘'+b.title+'’ QR을 아직 찾지 못했어요'); b.el=d; $('#sceneWrap').appendChild(d) });
 function ui(){
   const n=owned.length; $('#cnt').textContent=n+' / '+N; $('#barI').style.width=n/N*100+'%';
-  $('#tip').textContent= n===0?'작품 옆 QR을 찍으면 책에 색이 칠해져요': n>=N?'열두 권을 모두 모았어요. 책을 누르면 작품을 볼 수 있어요': (N-n)+'권 남았어요. 색칠된 책을 눌러 보세요';
+  $('#tip').textContent= n===0?'회색 제목의 작품을 찾아 QR을 찍어 보세요': n>=N?'열두 권을 모두 모았어요. 책을 누르면 작품을 볼 수 있어요': (N-n)+'권 남았어요. 회색 제목의 작품을 찾아보세요';
   $('#saveBtn').hidden=n<N; $('#scanBtn').hidden=n>=N;
-  B.forEach(b=>b.el.setAttribute('aria-label',has(b.id)?b.title+', '+b.author:'아직 모으지 않은 책'));
+  B.forEach(b=>b.el.setAttribute('aria-label',has(b.id)?b.title+', '+b.author:b.title+', 아직 찾지 못한 책'));
 }
 let tt; function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('on'),2300) }
 let onClose=null, lastFocus=null;
